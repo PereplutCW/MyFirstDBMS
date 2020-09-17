@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <string>
 #include <map>
@@ -7,13 +9,32 @@
 
 using namespace std;
 
+// Определение и реализация класса Date для хранения и операций с датами
+
 class Date {
+  int year;
+  int month;
+  int day;
 public:
-  Date() {};
-  Date(int newYear, int newMonth, int newDay) {
-    year = newYear;
-    month = newMonth;
-    day = newDay;
+  Date() {
+    year = 0;
+    month = 0;
+    day = 0;
+  };
+  Date(const int new_year, const int new_month, const int new_day) {
+    year = new_year;
+    if (new_month < 1 || new_month > 12) {
+      string error_message;
+      error_message = "Month value is invalid: " + to_string(new_month);
+      throw runtime_error(error_message);
+    } else if (new_day < 1 || new_day > 31) {
+      string error_message;
+      error_message = "Day value is invalid: " + to_string(new_day);
+      throw runtime_error(error_message);
+    } else {
+      month = new_month;
+      day = new_day;
+    }
   }
   int GetYear() const {
     return year;
@@ -24,11 +45,10 @@ public:
   int GetDay() const {
     return day;
   };
-private:
-  int year;
-  int month;
-  int day;
 };
+
+// Перегрузка оператора < для класса Date для возможности сортировки объектов этого класса 
+// в контейнерах map и set
 
 bool operator<(const Date& lhs, const Date& rhs) {
   if (lhs.GetYear() == rhs.GetYear()) {
@@ -38,78 +58,112 @@ bool operator<(const Date& lhs, const Date& rhs) {
     return lhs.GetMonth() < rhs.GetMonth();
   }
   return lhs.GetYear() < rhs.GetYear();
-};
+}
+
+// Перегрузка оператора << для класса Date для возможности вывода объектов этого класса 
+// в стандартный вывод
+
+ostream& operator<<(ostream& stream, const Date& date) {
+  stream << setw(4) << setfill('0') << date.GetYear() << '-' <<
+            setw(2) << setfill('0') << date.GetMonth() << '-' <<
+            setw(2) << setfill('0') << date.GetDay();
+  return stream;
+}
+
+// Определение и реализация функции EnsureNextSymbolAndSkip для проверки разделяющего символа
+// в дате формата Год-Месяц-День
+
+void EnsureNextSymbolAndSkip(stringstream& stream, const string& data_string) {
+  if (stream.peek() != '-') {
+    stringstream error_message;
+    error_message << "Wrong date format: " + data_string;
+    throw runtime_error(error_message.str());
+  }
+  stream.ignore(1);
+}
+
+// Перегрузка оператора >> для класса Date для возможности ввода объектов этого класса 
+// из стандартного ввода
+
+istream& operator>>(istream& stream, Date& date) {
+  int year = 0;
+  int month = 0;
+  int day = 0;
+  string data_string;
+  string string_end = "";
+  if (stream >> data_string) {
+    stringstream input(data_string);
+    input >> year;
+    EnsureNextSymbolAndSkip(input, data_string);
+    input >> month;
+    EnsureNextSymbolAndSkip(input, data_string);
+    input >> day;
+    input >> string_end;
+    if (year >= 0 && year < 10000 && month < 100 && day < 100 && string_end == "") {
+      date = Date(year, month, day);
+      return stream;
+    } else {
+      stringstream error_message;
+      error_message << "Wrong date format: " + data_string;
+      throw runtime_error(error_message.str());
+    }
+  } else {
+    stringstream error_message;
+    error_message << "Wrong date format: " + data_string;
+    throw runtime_error(error_message.str());
+  }
+}
+
+// Определение и реализация класса Databates для хранения и операций с парами Дата - Событие
 
 class Database {
+  map<Date, set<string>> dates;
 public:
   void AddEvent(const Date& date, const string& event) {
     dates[date].insert(event);
   };
   bool DeleteEvent(const Date& date, const string& event) {
-    if (dates.count(date) && dates[date].count(event)) {
-      set<string> events;
-      events = dates.at(date);
-      events.erase(event);
-      return true;
+    if (dates.count(date)) {
+        if (dates[date].count(event)) {
+            dates[date].erase(event);
+            return true;
+        } else {
+            return false;
+        }     
     } else {
       return false;
     }
   };
   int DeleteDate(const Date& date) {
     if (dates.count(date)) {
-      int count = 0;
-      for (auto& event : dates[date]) {
-        dates[date].erase(event);
-        count++;
-      }
-      return count;
+      int events_nums = dates[date].size();
+      dates.erase(date);
+      return events_nums;
     }
+    return 0;
   };
-  string Find(const Date& date) const {
+  void Find(const Date& date) const {
     if (dates.count(date)) {
-      set<string> events;
-      events = dates.at(date);
-      for (const string& event : events) {
-        return event;
+      for (const string& event : dates.at(date)) {
+        cout << event << endl;
       }
     }
   };  
   void Print() const {
-    for (const auto& date : dates) {
-      setfill('0');
-      cout << setw(4) << date.first.GetYear() << '-' <<
-             setw(2) << date.first.GetMonth() << '-' <<
-             setw(2) << date.first.GetDay() << " ";
-      set<string> events;
-      events = date.second;
-      for (const string& event : events) {
-        cout << event << " ";
+    for (auto& date : dates) {
+      for (auto& event : date.second) {
+        cout << date.first << ' ' << event << endl;
       }
-      cout << endl;
     } 
   };
-private:
-  map<Date, set<string>> dates;
 };
 
 int main() {
   try {
-    Database dataBase;
-    
     string command;
+
     while (getline(cin, command)) {
-      if (command == "Add") {
-        // dataBase.AddEvent(date, event);
-      } else if (command == "Del") {
-        // dataBase.DeleteEvent(date, event);
-        // dataBase.DeleteDate(date);
-      } else if (command == "Find") {
-        // dataBase.Find(date);
-      } else if (command == "Print") {
-        // dataBase.Print();
-      } else {
-        //
-      }
+      //
     }
   } catch (exception& ex) {
       cout << ex.what() << endl;
