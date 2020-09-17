@@ -12,25 +12,28 @@ using namespace std;
 // Определение и реализация класса Date для хранения и операций с датами
 
 class Date {
+  int year;
+  int month;
+  int day;
 public:
-  explicit Date() {
+  Date() {
     year = 0;
     month = 0;
     day = 0;
   };
-  explicit Date(const int newYear, const int newMonth, const int newDay) {
-    year = newYear;
-    if (newMonth < 1 || newMonth > 12) {
-      string errorMessage;
-      errorMessage = "Month value is invalid: " + to_string(newMonth);
-      throw runtime_error(errorMessage);
-    } else if (newDay < 1 || newDay > 31) {
-      string errorMessage;
-      errorMessage = "Day value is invalid: " + to_string(newDay);
-      throw runtime_error(errorMessage);
+  Date(const int new_year, const int new_month, const int new_day) {
+    year = new_year;
+    if (new_month < 1 || new_month > 12) {
+      string error_message;
+      error_message = "Month value is invalid: " + to_string(new_month);
+      throw runtime_error(error_message);
+    } else if (new_day < 1 || new_day > 31) {
+      string error_message;
+      error_message = "Day value is invalid: " + to_string(new_day);
+      throw runtime_error(error_message);
     } else {
-      month = newMonth;
-      day = newDay;
+      month = new_month;
+      day = new_day;
     }
   }
   int GetYear() const {
@@ -42,10 +45,6 @@ public:
   int GetDay() const {
     return day;
   };
-private:
-  int year;
-  int month;
-  int day;
 };
 
 // Перегрузка оператора < для класса Date для возможности сортировки объектов этого класса 
@@ -74,11 +73,11 @@ ostream& operator<<(ostream& stream, const Date& date) {
 // Определение и реализация функции EnsureNextSymbolAndSkip для проверки разделяющего символа
 // в дате формата Год-Месяц-День
 
-void EnsureNextSymbolAndSkip(stringstream& stream, const string& dataString) {
+void EnsureNextSymbolAndSkip(stringstream& stream, const string& data_string) {
   if (stream.peek() != '-') {
-    stringstream errorMessage;
-    errorMessage << "Wrong date format: " + dataString;
-    throw runtime_error(errorMessage.str());
+    stringstream error_message;
+    error_message << "Wrong date format: " + data_string;
+    throw runtime_error(error_message.str());
   }
   stream.ignore(1);
 }
@@ -87,58 +86,61 @@ void EnsureNextSymbolAndSkip(stringstream& stream, const string& dataString) {
 // из стандартного ввода
 
 istream& operator>>(istream& stream, Date& date) {
-  int year = 10000;
-  int month = 10000;
-  int day = 10000;
-
-  string dataString;
-  string endError = "";
-  if (stream >> dataString) {
-    stringstream stream(dataString);
-    stream >> year;
-    EnsureNextSymbolAndSkip(stream, dataString);
-    stream >> month;
-    EnsureNextSymbolAndSkip(stream, dataString);
-    stream >> day;
-    stream >> endError;
-    if (year >= 0 && year < 10000 && month < 10000 && day < 10000 && endError == "") {
+  int year = 0;
+  int month = 0;
+  int day = 0;
+  string data_string;
+  string string_end = "";
+  if (stream >> data_string) {
+    stringstream input(data_string);
+    input >> year;
+    EnsureNextSymbolAndSkip(input, data_string);
+    input >> month;
+    EnsureNextSymbolAndSkip(input, data_string);
+    input >> day;
+    input >> string_end;
+    if (year >= 0 && year < 10000 && month < 100 && day < 100 && string_end == "") {
       date = Date(year, month, day);
       return stream;
     } else {
-      stringstream errorMessage;
-      errorMessage << "Wrong date format: " + dataString;
-      throw runtime_error(errorMessage.str());
+      stringstream error_message;
+      error_message << "Wrong date format: " + data_string;
+      throw runtime_error(error_message.str());
     }
   } else {
-    stringstream errorMessage;
-    errorMessage << "Wrong date format: " + dataString;
-    throw runtime_error(errorMessage.str());
+    stringstream error_message;
+    error_message << "Wrong date format: " + data_string;
+    throw runtime_error(error_message.str());
   }
 }
 
 // Определение и реализация класса Databates для хранения и операций с парами Дата - Событие
 
 class Database {
+  map<Date, set<string>> dates;
 public:
   void AddEvent(const Date& date, const string& event) {
     dates[date].insert(event);
   };
   bool DeleteEvent(const Date& date, const string& event) {
-    if (dates.count(date) && dates[date].count(event)) {
-      set<string> events;
-      events = dates.at(date);
-      events.erase(event);
-      return true;
+    if (dates.count(date)) {
+        if (dates[date].count(event)) {
+            dates[date].erase(event);
+            return true;
+        } else {
+            return false;
+        }     
     } else {
       return false;
     }
   };
   int DeleteDate(const Date& date) {
     if (dates.count(date)) {
-      int eventsNums = dates[date].size();
+      int events_nums = dates[date].size();
       dates.erase(date);
-      return eventsNums;
+      return events_nums;
     }
+    return 0;
   };
   void Find(const Date& date) const {
     if (dates.count(date)) {
@@ -154,43 +156,14 @@ public:
       }
     } 
   };
-private:
-  map<Date, set<string>> dates;
 };
-
-// Определение и реализация функции ParseCommands для чтения и обработки комманд из потока
-
-void ParseCommands(const string& command, Database& dataBase) { 
-  stringstream stream(command);
-  string com;
-  Date date;
-  string event;
-  if (stream >> com) {
-    if (com == "Add") {
-      // dataBase.AddEvent(date, event);
-    } else if (com == "Del") {
-      // dataBase.DeleteEvent(date, event);
-      // dataBase.DeleteDate(date);
-    } else if (com == "Find") {
-      // dataBase.Find(date);
-    } else if (com == "Print") {
-      // dataBase.Print();
-    } else {
-      stringstream errorMessage;
-      errorMessage << "Unknown command: " << com;
-      throw runtime_error(errorMessage.str());
-    }
-  }
-  
-}
 
 int main() {
   try {
-    Database dataBase;
     string command;
 
     while (getline(cin, command)) {
-      ParseCommands(command, dataBase);
+      //
     }
   } catch (exception& ex) {
       cout << ex.what() << endl;
