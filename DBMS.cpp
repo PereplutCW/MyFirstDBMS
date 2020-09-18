@@ -158,12 +158,57 @@ public:
   };
 };
 
+// Определение и реализация функции ParseCommands для чтения и обработки комманд из потока
+
+void ParseCommands(const string& command, Database& data_base) { 
+  stringstream stream(command);
+  string com;
+  Date date;
+  string event;
+  if (stream >> com) {
+    if (com == "Add") {
+        if (stream >> date) {
+            if (stream >> event) {
+                data_base.AddEvent(date, event);
+            } else {
+                stringstream error_message;
+                error_message << "Wrong date format: " << date;
+                throw runtime_error(error_message.str());
+            }
+        }
+    } else if (com == "Del") {
+        if (stream >> date) {
+            if (stream >> event) {
+                if (data_base.DeleteEvent(date, event)) {
+                    cout << "Deleted successfully" << endl;
+                } else {
+                    cout << "Event not found" << endl;
+                }
+            } else {
+                cout << "Deleted " << data_base.DeleteDate(date) << " events" << endl;
+            }
+        }
+    } else if (com == "Find") {
+        if (stream >> date) {
+            data_base.Find(date);
+        }
+    } else if (com == "Print") {
+        data_base.Print();
+    } else {
+      stringstream error_message;
+      error_message << "Unknown command: " << com;
+      throw runtime_error(error_message.str());
+    }
+  }  
+}
+
 int main() {
   try {
+    Database data_base;
     string command;
 
     while (getline(cin, command)) {
-      //
+      ParseCommands(command, data_base);
     }
   } catch (exception& ex) {
       cout << ex.what() << endl;
